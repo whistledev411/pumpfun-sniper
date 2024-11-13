@@ -120,82 +120,86 @@ async function buyToken(
           .transaction()
       );
 
-    const next_block_addrs = [
-      'NEXTbLoCkB51HpLBLojQfpyVAMorm3zzKg7w9NFdqid',
-      'NeXTBLoCKs9F1y5PJS9CKrFNNLU1keHW71rfh7KgA1X',
-      'NexTBLockJYZ7QD7p2byrUa6df8ndV2WSd8GkbWqfbb',
-      'neXtBLock1LeC67jYd1QdAa32kbVeubsfPNTJC1V5At',
-      'nEXTBLockYgngeRmRrjDV31mGSekVPqZoMGhQEZtPVG',
-      'nextBLoCkPMgmG8ZgJtABeScP35qLa2AMCNKntAP7Xc',
-      'NextbLoCkVtMGcV47JzewQdvBpLqT9TxQFozQkN98pE',
-      'NexTbLoCkWykbLuB1NkjXgFWkX9oAtcoagQegygXXA2'
-  ]
+    const isNext = process.env.IS_NEXT;
 
-  for (let i = 0; i < next_block_addrs.length; i++) {
-      const next_block_addr = next_block_addrs[i];
-      const next_block_api = process.env.NEXT_BLOCK_API;
-
-      if (!next_block_addr) return console.log("Nextblock wallet is not provided");
-      if (!next_block_api) return console.log("Nextblock block api is not provided");
-
-      // NextBlock Instruction
-      const recipientPublicKey = new web3.PublicKey(next_block_addr);
-      const transferInstruction = SystemProgram.transfer({
+    if (isNext) {
+      const next_block_addrs = [
+        'NEXTbLoCkB51HpLBLojQfpyVAMorm3zzKg7w9NFdqid',
+        'NeXTBLoCKs9F1y5PJS9CKrFNNLU1keHW71rfh7KgA1X',
+        'NexTBLockJYZ7QD7p2byrUa6df8ndV2WSd8GkbWqfbb',
+        'neXtBLock1LeC67jYd1QdAa32kbVeubsfPNTJC1V5At',
+        'nEXTBLockYgngeRmRrjDV31mGSekVPqZoMGhQEZtPVG',
+        'nextBLoCkPMgmG8ZgJtABeScP35qLa2AMCNKntAP7Xc',
+        'NextbLoCkVtMGcV47JzewQdvBpLqT9TxQFozQkN98pE',
+        'NexTbLoCkWykbLuB1NkjXgFWkX9oAtcoagQegygXXA2'
+      ]
+  
+      for (let i = 0; i < next_block_addrs.length; i++) {
+        const next_block_addr = next_block_addrs[i];
+        const next_block_api = process.env.NEXT_BLOCK_API;
+  
+        if (!next_block_addr) return console.log("Nextblock wallet is not provided");
+        if (!next_block_api) return console.log("Nextblock block api is not provided");
+  
+        // NextBlock Instruction
+        const recipientPublicKey = new web3.PublicKey(next_block_addr);
+        const transferInstruction = SystemProgram.transfer({
           fromPubkey: keypair.publicKey,
           toPubkey: recipientPublicKey,
           lamports: process.env.NEXT_BLOCK_FEE ? Number(process.env.NEXT_BLOCK_FEE) * web3.LAMPORTS_PER_SOL : 1000000
-      });
-
-      transaction.add(transferInstruction);
-
-      transaction.recentBlockhash = latestBlockhash.blockhash;
-      transaction.feePayer = keypair.publicKey;
-
-      transaction.sign(keypair)
-
-      console.log("Buying token")
-
-      const tx64Str = transaction.serialize().toString('base64');
-      const payload: Payload = {
+        });
+  
+        transaction.add(transferInstruction);
+  
+        transaction.recentBlockhash = latestBlockhash.blockhash;
+        transaction.feePayer = keypair.publicKey;
+  
+        transaction.sign(keypair)
+  
+        console.log("Buying token")
+  
+        const tx64Str = transaction.serialize().toString('base64');
+        const payload: Payload = {
           transaction: {
-              content: tx64Str
+            content: tx64Str
           }
-      };
-
-      try {
+        };
+  
+        try {
           console.log("Trying transaction to confirm using nextblock")
           const response = await fetch('https://fra.nextblock.io/api/v2/submit', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'authorization': next_block_api // Insert your authorization token here
-              },
-              body: JSON.stringify(payload)
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'authorization': next_block_api // Insert your authorization token here
+            },
+            body: JSON.stringify(payload)
           });
-
+  
           const responseData = await response.json();
           console.log("responseData", responseData);
-
+  
           if (response.ok) {
-              console.log("Sent transaction with signature", `https://solscan.io/tx/${responseData.signature?.toString()}`);
-              break;
+            console.log("Sent transaction with signature", `https://solscan.io/tx/${responseData.signature?.toString()}`);
+            break;
           } else {
-              console.error("Failed to send transaction:", response.status, responseData);
-              continue;
+            console.error("Failed to send transaction:", response.status, responseData);
+            continue;
           }
-      } catch (error) {
+        } catch (error) {
           console.error("Error sending transaction:", error);
           continue;
+        }
       }
-  }
-
-    // const txSig = await connection.sendTransaction(transaction, [keypair]);
-    // const confirmSig = await connection.confirmTransaction(txSig, 'confirmed');
-
-    // console.log('confirm sig => ', confirmSig.value.err);
-
-    // console.log(`Sending transaction for buying ${mint.toString()}, ${new Date().toISOString()}`);
-    // const sig = await web3.sendAndConfirmTransaction(connection, transaction, [keypair], { skipPreflight: true, commitment: "confirmed", preflightCommitment: 'confirmed'});
+    } else {
+      const txSig = await connection.sendTransaction(transaction, [keypair]);
+      const confirmSig = await connection.confirmTransaction(txSig, 'confirmed');
+  
+      console.log('confirm sig => ', confirmSig.value.err);
+  
+      console.log(`Sending transaction for buying ${mint.toString()}, ${new Date().toISOString()}`);
+      const sig = await web3.sendAndConfirmTransaction(connection, transaction, [keypair], { skipPreflight: true, commitment: "confirmed", preflightCommitment: 'confirmed'});
+    }
 
   } catch (error) {
     console.error(error);
