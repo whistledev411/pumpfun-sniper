@@ -9,17 +9,18 @@ import { PumpFun } from "../idl/pump-fun";
 import IDL from "../idl/pump-fun.json";
 import wait from "./wait";
 import getBondingCurveTokenAccountWithRetry from "./getBondingCurveTokenAccountWithRetry";
-import { SystemProgram } from "@solana/web3.js";
+import { SystemProgram, TransactionMessage } from "@solana/web3.js";
+import { executeJitoTx } from "../../utils/jito";
 
 const BOANDING_CURVE_ACC_RETRY_AMOUNT = 5;
 const BOANDING_CURVE_ACC_RETRY_DELAY = 50;
 
 
 interface Payload {
-  transaction: TransactionMessage;
+  transaction: TransactionMessages;
 }
 
-interface TransactionMessage {
+interface TransactionMessages {
   content: string;
 }
 
@@ -47,6 +48,7 @@ async function buyToken(
         mint: mint,
       }
     );
+    console.log("🚀 ~ tokenAccounts:", tokenAccounts)
 
     // Get/Create token account
     const associatedUser = await token.getAssociatedTokenAddress(mint, keypair.publicKey, false);
@@ -93,7 +95,7 @@ async function buyToken(
 
     // request a specific compute unit budget
     const modifyComputeUnits = web3.ComputeBudgetProgram.setComputeUnitLimit({
-      units: 5000000,
+      units: 100000,
     });
 
     // set the desired priority fee
@@ -120,7 +122,13 @@ async function buyToken(
           .transaction()
       );
 
-    const isNext = process.env.IS_NEXT;
+    transaction.feePayer = keypair.publicKey;
+    transaction.recentBlockhash = latestBlockhash.blockhash;
+
+    console.log(await connection.simulateTransaction(transaction))
+
+    const isNext = process.env.IS_NEXT === 'true';
+    const isJito = process.env.IS_JITO === 'true';
 
     if (isNext) {
       const next_block_addrs = [
@@ -133,14 +141,14 @@ async function buyToken(
         'NextbLoCkVtMGcV47JzewQdvBpLqT9TxQFozQkN98pE',
         'NexTbLoCkWykbLuB1NkjXgFWkX9oAtcoagQegygXXA2'
       ]
-  
+
       for (let i = 0; i < next_block_addrs.length; i++) {
         const next_block_addr = next_block_addrs[i];
         const next_block_api = process.env.NEXT_BLOCK_API;
-  
+
         if (!next_block_addr) return console.log("Nextblock wallet is not provided");
         if (!next_block_api) return console.log("Nextblock block api is not provided");
-  
+
         // NextBlock Instruction
         const recipientPublicKey = new web3.PublicKey(next_block_addr);
         const transferInstruction = SystemProgram.transfer({
@@ -148,23 +156,20 @@ async function buyToken(
           toPubkey: recipientPublicKey,
           lamports: process.env.NEXT_BLOCK_FEE ? Number(process.env.NEXT_BLOCK_FEE) * web3.LAMPORTS_PER_SOL : 1000000
         });
-  
+
         transaction.add(transferInstruction);
-  
-        transaction.recentBlockhash = latestBlockhash.blockhash;
-        transaction.feePayer = keypair.publicKey;
-  
+
         transaction.sign(keypair)
-  
+
         console.log("Buying token")
-  
+
         const tx64Str = transaction.serialize().toString('base64');
         const payload: Payload = {
           transaction: {
             content: tx64Str
           }
         };
-  
+
         try {
           console.log("Trying transaction to confirm using nextblock")
           const response = await fetch('https://fra.nextblock.io/api/v2/submit', {
@@ -175,10 +180,10 @@ async function buyToken(
             },
             body: JSON.stringify(payload)
           });
-  
+
           const responseData = await response.json();
           console.log("responseData", responseData);
-  
+
           if (response.ok) {
             console.log("Sent transaction with signature", `https://solscan.io/tx/${responseData.signature?.toString()}`);
             break;
@@ -191,14 +196,29 @@ async function buyToken(
           continue;
         }
       }
+    } else if (isJito) {
+
+      const messageV0 = new TransactionMessage({
+        payerKey: keypair.publicKey,
+        recentBlockhash: latestBlockhash.blockhash,
+        instructions: transaction.instructions,
+      }).compileToV0Message()
+
+      const versionedTx = new web3.VersionedTransaction(messageV0);
+      versionedTx.sign([keypair]);
+
+      const sig = await executeJitoTx([versionedTx], keypair, 'confirmed');
+
+      console.log("🚀 ~ sig:", sig)
     } else {
       const txSig = await connection.sendTransaction(transaction, [keypair]);
       const confirmSig = await connection.confirmTransaction(txSig, 'confirmed');
-  
+
       console.log('confirm sig => ', confirmSig.value.err);
-  
+
       console.log(`Sending transaction for buying ${mint.toString()}, ${new Date().toISOString()}`);
-      const sig = await web3.sendAndConfirmTransaction(connection, transaction, [keypair], { skipPreflight: true, commitment: "confirmed", preflightCommitment: 'confirmed'});
+      const sig = await web3.sendAndConfirmTransaction(connection, transaction, [keypair], { skipPreflight: true, commitment: "confirmed", preflightCommitment: 'confirmed' });
+      console.log("🚀 ~ sig:", sig)
     }
 
   } catch (error) {

