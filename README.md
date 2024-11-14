@@ -6,13 +6,22 @@ If you use Next Block service, you can buy more quickly.
 
 You can set the .env like following:
 
+IS_NEXT = true
+
 NEXT_BLOCK_API = 
 
 NEXT_BLOCK_WALLET = 
 
 NEXT_BLOCK_FEE = 
 
-IS_NEXT = true
+
+### Added Geyser Mode.
+If you have GRPC, you can monitor new Pump Token more quickly.
+You can simply set the .env like following.
+
+IS_GEYSER = true
+
+GEYSER_RPC = 
 
 
 ## 💬Contact Me
@@ -31,7 +40,7 @@ Twitter: [@whistle](https://x.com/lucky_whistle)
 
     ```
     git clone https://github.com/whistledev411/pumpfun-dev-sniper.git
-    cd pumpfun-bundler
+    cd pumpfun-dev-sniper
     ```
 2. Install dependencies
 
