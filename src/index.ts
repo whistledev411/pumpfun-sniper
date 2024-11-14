@@ -120,7 +120,7 @@ const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: s
 
             if (logs && logs.some((log: string | string[]) => log.includes('Program log: Instruction: InitializeMint2'))) {
                 console.log('New pump.fun token!');
-                console.log('tx:', `https://solscan.io/tx/${signature}`, formatDate());
+                console.log('tx:', `https://solscan.io/tx/${signature}`, await formatDate());
                 ws.close();
                 
                 console.time('sig');
