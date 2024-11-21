@@ -1,6 +1,7 @@
 import {
     Connection,
     Keypair,
+    PublicKey,
 } from "@solana/web3.js";
 import base58 from "bs58";
 import dotnet from 'dotenv'
@@ -8,20 +9,37 @@ import { commitment, PUMP_FUN_PROGRAM } from "./constants";
 import { convertHttpToWebSocket, formatDate } from "./utils/commonFunc";
 
 import WebSocket = require("ws");
+import buyToken from "./pumputils/utils/buyToken";
+import { Metaplex } from "@metaplex-foundation/js";
 
 dotnet.config();
 
 
 const rpc = process.env.RPC_ENDPOINT;
-console.log("🚀 ~ rpc:", rpc)
-const payer = process.env.PRIVATE_KEY;
-console.log("🚀 ~ payer:", payer)
-const devwallet = process.env.DEV_WALLET_ADDRESS;
-console.log("🚀 ~ devwallet:", devwallet)
-const buyamount = process.env.BUY_AMOUNT;
-console.log("🚀 ~ buyamount:", buyamount)
+console.log("🚀 RPC:", rpc)
 
-const tokenDevWalletSniper = async (rpcEndPoint: string, payer: string, solIn: number, devAddr: string) => {
+const payer = process.env.PRIVATE_KEY;
+console.log("🚀 Private Key:", `${payer?.slice(0, 6)}...`)
+
+const isDevMode = process.env.DEV_MODE === 'true';
+const devwallet = process.env.DEV_WALLET_ADDRESS;
+if (isDevMode) {
+    console.log("🚀 Dev Wallet:", devwallet)
+}
+
+const isTickerMode = process.env.TICKER_MODE === 'true';
+const tokenTicker = process.env.TOKEN_TICKER;
+if (isTickerMode) {
+    console.log("🚀 Token Ticker:", tokenTicker)
+}
+
+const buyamount = process.env.BUY_AMOUNT;
+console.log("🚀 Buy Amount:", buyamount)
+
+const isGeyser = process.env.IS_GEYSER === 'true';
+
+
+const init = async (rpcEndPoint: string, payer: string, solIn: number, devAddr: string) => {
     try {
         const payerKeypair = Keypair.fromSecretKey(base58.decode(payer));
         let isBuying = false;
@@ -40,6 +58,9 @@ const tokenDevWalletSniper = async (rpcEndPoint: string, payer: string, solIn: n
                 }
             }
         };
+
+        console.log('--------------- Bot is Runnig Now ---------------')
+
         globalLogListener = logConnection.onLogs(
             PUMP_FUN_PROGRAM,
             async ({ logs, err, signature }) => {
@@ -50,20 +71,35 @@ const tokenDevWalletSniper = async (rpcEndPoint: string, payer: string, solIn: n
                     if (!parsedTransaction) {
                         return;
                     }
-                    console.log("new signature => ", `https://solscan.io/tx/${signature}`, await formatDate());
-                    console.time('sig')
+                    console.log("New signature => ", `https://solscan.io/tx/${signature}`, await formatDate());
                     let dev = parsedTransaction?.transaction.message.accountKeys[0].pubkey.toString();
-
-                    // if (dev === devAddr) return;
-
-                    console.log("Dev wallet => ", `https://solscan.io/address/${dev}`);
                     const mint = parsedTransaction?.transaction.message.accountKeys[1].pubkey;
+                    if (isDevMode) {
+                        console.log("Dev wallet => ", `https://solscan.io/address/${dev}`);
+                    }
+                    if (isDevMode && dev !== devAddr) return;
+
+                    if (isTickerMode) {
+                        if (!tokenTicker) return console.log("Token Ticker is not defiend!");
+                        const tokenInfo = await getTokenMetadata(mint.toString(), connection);
+                        if (!tokenInfo) return;
+                        const isTarget = tokenInfo.symbol.toUpperCase().includes(tokenTicker.toUpperCase())
+                        if (!isTarget) return
+                        console.log(`Found $${tokenInfo.symbol} token.`)
+                    }
+
                     console.log('New token => ', `https://solscan.io/token/${mint.toString()}`)
                     await stopListener()
                     isBuying = true;
-                    console.log('Going to start buying =>')
-                    console.timeEnd('sig');
-                    
+                    const sig = await buyToken(mint, connection, payerKeypair, solIn, 1);
+                    console.log('Buy Transaction => ', `https://solscan.io/tx/${sig}`)
+                    if (!sig) {
+                        isBuying = false;
+                    } else {
+                        console.log('🚀 Buy Success!!!');
+                        console.log('Try to sell on pumpfun: ', `https://pump.fun/${mint.toString()}`)
+                    }
+
                 }
             },
             commitment
@@ -119,29 +155,37 @@ const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: s
             const accountKeys = result.transaction.transaction.message.accountKeys.map((ak: { pubkey: any; }) => ak.pubkey);
 
             if (logs && logs.some((log: string | string[]) => log.includes('Program log: Instruction: InitializeMint2'))) {
-                console.log('New pump.fun token!');
-                console.log('tx:', `https://solscan.io/tx/${signature}`, await formatDate());
-                ws.close();
-                
-                console.time('sig');
-
-                console.log('Creator:', accountKeys[0]);
-                console.log('Token:', accountKeys[1]);
-
                 const dev = accountKeys[0]
                 const mint = accountKeys[1]
 
-                // if (dev === devAddr) return;
+                console.log("New signature => ", `https://solscan.io/tx/${signature}`, await formatDate());
+                if (isDevMode) {
+                    console.log("Dev wallet => ", `https://solscan.io/address/${dev}`);
+                }
+                if (isDevMode && dev !== devAddr) return;
 
-                console.log("Dev wallet => ", `https://solscan.io/address/${dev}`);
+                if (isTickerMode) {
+                    if (!tokenTicker) return console.log("Token Ticker is not defiend!");
+                    const tokenInfo = await getTokenMetadata(mint.toString(), connection);
+                    if (!tokenInfo) return;
+                    const isTarget = tokenInfo.symbol.toUpperCase().includes(tokenTicker.toUpperCase())
+                    if (!isTarget) return
+                    console.log(`Found $${tokenInfo.symbol} token.`)
+                }
+
                 console.log('New token => ', `https://solscan.io/token/${mint.toString()}`)
-                
-                console.timeEnd('sig');
-                console.log('Going to start buying =>')
-                console.time('buy')
-                
-
-                // Log the first and second account keys if they exist
+                ws.close();
+                // const sig = await buyToken(mint, connection, payerKeypair, solIn, 1);
+                // console.log('Buy Transaction => ', `https://solscan.io/tx/${sig}`)
+                // if (!sig) {
+                //     ws.on('open', function open() {
+                //         console.log('WebSocket is open');
+                //         sendRequest(ws);  // Send a request once the WebSocket is open
+                //     });
+                // } else {
+                //     console.log('🚀 Buy Success!!!');
+                //     console.log('Try to sell on pumpfun: ', `https://pump.fun/${mint.toString()}`)
+                // }
 
             }
         } catch (e) {
@@ -152,15 +196,26 @@ const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: s
 }
 
 const runBot = () => {
-    const isGeyser = process.env.IS_GEYSER === 'true';
     if (isGeyser) {
-        console.log('Geyser mode selected!');
+        console.log('--------------- Geyser mode selected! ---------------\n');
         withGaser(rpc!, payer!, Number(buyamount!), devwallet!);
     } else {
-        console.log("Common Mode selected!");
-        tokenDevWalletSniper(rpc!, payer!, Number(buyamount!), devwallet!)
+        console.log("--------------- Common Mode selected! ---------------\n");
+        init(rpc!, payer!, Number(buyamount!), devwallet!)
     }
-    console.log("🚀 ~ runBot ~ isGeyser:", isGeyser)
 }
+
+
+const getTokenMetadata = async (mintAddress: string, connection: Connection) => {
+    try {
+        const metaplex = Metaplex.make(connection);
+        const mintPublicKey = new PublicKey(mintAddress);
+        const nft = await metaplex.nfts().findByMint({ mintAddress: mintPublicKey });
+        return nft;  // Returns the token's ticker/symbol
+    } catch (error) {
+        //   console.error("Error fetching token metadata:", error);
+        return false
+    }
+};
 
 runBot()
