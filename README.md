@@ -65,6 +65,6 @@ TOKEN_TICKER = a
 
 ## Dev Wallet Snipe
 
-DEV_MODE = false
+DEV_MODE = true
 
 DEV_WALLET_ADDRESS = 
