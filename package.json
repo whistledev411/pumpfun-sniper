@@ -1,14 +1,14 @@
 {
-  "name": "backend",
+  "name": "pumpfun sniper bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Pumpfun sniper that can snipe tokens by dev wallet or ticker...",
+  "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/index.ts"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["pumpfun", "pumpfun sniper", "trading bot", "pumpdotfun", "pumpdotfun bot"],
+  "author": "Whistle",
   "license": "ISC",
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
