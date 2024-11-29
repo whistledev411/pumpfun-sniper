@@ -38,13 +38,12 @@ console.log("🚀 Buy Amount:", buyamount)
 
 const isGeyser = process.env.IS_GEYSER === 'true';
 
-
 const init = async (rpcEndPoint: string, payer: string, solIn: number, devAddr: string) => {
     try {
         const payerKeypair = Keypair.fromSecretKey(base58.decode(payer));
         let isBuying = false;
         const connection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "confirmed" });
-        const logConnection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "confirmed" });
+        const logConnection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "processed" });
         let globalLogListener: any;
 
         // Function to stop the listener
@@ -71,7 +70,8 @@ const init = async (rpcEndPoint: string, payer: string, solIn: number, devAddr: 
                     if (!parsedTransaction) {
                         return;
                     }
-                    console.log("New signature => ", `https://solscan.io/tx/${signature}`, await formatDate());
+                    console.time('analyze')
+                    console.log("New signature => ", `https://solscan.io/tx/${signature}`, formatDate());
                     let dev = parsedTransaction?.transaction.message.accountKeys[0].pubkey.toString();
                     const mint = parsedTransaction?.transaction.message.accountKeys[1].pubkey;
                     if (isDevMode) {
@@ -91,7 +91,10 @@ const init = async (rpcEndPoint: string, payer: string, solIn: number, devAddr: 
                     console.log('New token => ', `https://solscan.io/token/${mint.toString()}`)
                     await stopListener()
                     isBuying = true;
+                    console.timeEnd('analyze')
+                    console.time('buytoken')
                     const sig = await buyToken(mint, connection, payerKeypair, solIn, 1);
+                    console.timeEnd('buytoken')
                     console.log('Buy Transaction => ', `https://solscan.io/tx/${sig}`)
                     if (!sig) {
                         isBuying = false;
@@ -111,13 +114,15 @@ const init = async (rpcEndPoint: string, payer: string, solIn: number, devAddr: 
     }
 };
 
-
 const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: string) => {
     const GEYSER_RPC = process.env.GEYSER_RPC;
     if (!GEYSER_RPC) return console.log('Geyser RPC is not provided!');
     const ws = new WebSocket(GEYSER_RPC);
     const connection = new Connection(rpcEndPoint, { wsEndpoint: convertHttpToWebSocket(rpcEndPoint), commitment: "confirmed" });
-    const payerKeypair = Keypair.fromSecretKey(base58.decode(payer));
+    const payerKeypair = Keypair.fromSecretKey(base58.decode(payer))
+
+    console.log('Your Pub Key => ', payerKeypair.publicKey.toString())
+
     function sendRequest(ws: WebSocket) {
         const request = {
             jsonrpc: "2.0",
@@ -129,7 +134,7 @@ const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: s
                     accountInclude: ["6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"]
                 },
                 {
-                    commitment: "processed",
+                    commitment: "confirmed",
                     encoding: "jsonParsed",
                     transactionDetails: "full",
                     maxSupportedTransactionVersion: 0
@@ -158,7 +163,7 @@ const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: s
                 const dev = accountKeys[0]
                 const mint = accountKeys[1]
 
-                console.log("New signature => ", `https://solscan.io/tx/${signature}`, await formatDate());
+                console.log("New signature => ", `https://solscan.io/tx/${signature}`, formatDate());
                 if (isDevMode) {
                     console.log("Dev wallet => ", `https://solscan.io/address/${dev}`);
                 }
@@ -175,17 +180,18 @@ const withGaser = (rpcEndPoint: string, payer: string, solIn: number, devAddr: s
 
                 console.log('New token => ', `https://solscan.io/token/${mint.toString()}`)
                 ws.close();
-                // const sig = await buyToken(mint, connection, payerKeypair, solIn, 1);
-                // console.log('Buy Transaction => ', `https://solscan.io/tx/${sig}`)
-                // if (!sig) {
-                //     ws.on('open', function open() {
-                //         console.log('WebSocket is open');
-                //         sendRequest(ws);  // Send a request once the WebSocket is open
-                //     });
-                // } else {
-                //     console.log('🚀 Buy Success!!!');
-                //     console.log('Try to sell on pumpfun: ', `https://pump.fun/${mint.toString()}`)
-                // }
+                const mintPub = new PublicKey(mint);
+                const sig = await buyToken(mintPub, connection, payerKeypair, solIn, 1);
+                console.log('Buy Transaction => ', `https://solscan.io/tx/${sig}`)
+                if (!sig) {
+                    ws.on('open', function open() {
+                        console.log('WebSocket is open');
+                        sendRequest(ws);  // Send a request once the WebSocket is open
+                    });
+                } else {
+                    console.log('🚀 Buy Success!!!');
+                    console.log('Try to sell on pumpfun: ', `https://pump.fun/${mint.toString()}`)
+                }
 
             }
         } catch (e) {
@@ -204,7 +210,6 @@ const runBot = () => {
         init(rpc!, payer!, Number(buyamount!), devwallet!)
     }
 }
-
 
 const getTokenMetadata = async (mintAddress: string, connection: Connection) => {
     try {
