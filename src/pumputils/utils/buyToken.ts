@@ -208,8 +208,7 @@ async function buyToken(
       versionedTx.sign([keypair]);
 
       const sig = await executeJitoTx([versionedTx], keypair, 'confirmed');
-
-      console.log("🚀 ~ sig:", sig)
+      return sig
     } else {
       const txSig = await connection.sendTransaction(transaction, [keypair]);
       const confirmSig = await connection.confirmTransaction(txSig, 'confirmed');
@@ -218,7 +217,7 @@ async function buyToken(
 
       console.log(`Sending transaction for buying ${mint.toString()}, ${new Date().toISOString()}`);
       const sig = await web3.sendAndConfirmTransaction(connection, transaction, [keypair], { skipPreflight: true, commitment: "confirmed", preflightCommitment: 'confirmed' });
-      console.log("🚀 ~ sig:", sig)
+      return sig
     }
 
   } catch (error) {
