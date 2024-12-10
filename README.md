@@ -6,13 +6,11 @@ You can filter tokens by creator or token ticker/symbol.
 
 ## Update Version2(Yellowstone GRPC mode)
 
-I completed version2 that can snipe in 2~3 blocks after mint.
+I completed version2 that can snipe in 1 or 2 blocks after mint.
 
 ### Example Transactions
 
-https://solscan.io/tx/3YnGCmgP1rFqWvtagnsKfTdBmGPWmN55QVSpFHt7oGpc1qcKmgsBZfpJ4PV88LRa9TteBhqys5Q2SvAmi3vvF6te
-https://solscan.io/tx/4RB85q1K3TND6smuwYf2Ej9nLyAboJGSSa2YdgmGiYC5yPUDSoKXQrkLkJiCyQwzBKfxnQdyW1pxQbz4wsS3XJfY
-https://solscan.io/tx/5ZvVvEynaWceyNeLkcSFBKLxy8wbJtkiUhUsA5daEgvL97oAgJQusjasAdHaXXBNj1LoJjCH2d5X4gpUGQaThTRv
+https://solscan.io/tx/5q1EZZsWWAhAzWqLFY1238Brr6Go1aLTu8G3sAebMWLUZSAnwfnUA7LMvfbPmdcxhbANM7FAWB8DtwTiedPieraR
 
 # 💬Contact Me
 
