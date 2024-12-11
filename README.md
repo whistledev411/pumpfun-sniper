@@ -4,6 +4,13 @@ You can snipe and trade tokens on pumpfun.
 
 You can filter tokens by creator or token ticker/symbol.
 
+## Update Version2(Yellowstone GRPC mode)
+
+I completed version2 that can snipe in 1 or 2 blocks after mint.
+
+### Example Transactions
+
+https://solscan.io/tx/5q1EZZsWWAhAzWqLFY1238Brr6Go1aLTu8G3sAebMWLUZSAnwfnUA7LMvfbPmdcxhbANM7FAWB8DtwTiedPieraR
 
 # 💬Contact Me
 
