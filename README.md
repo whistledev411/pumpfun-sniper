@@ -1,4 +1,4 @@
-# 🤖Pumpfun Sniper
+# 🤖Solana Pumpfun Sniper
 
 You can snipe and trade tokens on pumpfun.
 
