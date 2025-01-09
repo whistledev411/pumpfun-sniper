@@ -5,9 +5,17 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node src/index.ts"
+    "start": "ts-node dist-encrypt/index.js",
+    "build": "npx tsc",
+    "encrypt": "npx javascript-obfuscator dist --output dist-encrypt --compact true --control-flow-flattening true --self-defending true"
   },
-  "keywords": ["pumpfun", "pumpfun sniper", "trading bot", "pumpdotfun", "pumpdotfun bot"],
+  "keywords": [
+    "pumpfun",
+    "pumpfun sniper",
+    "trading bot",
+    "pumpdotfun",
+    "pumpdotfun bot"
+  ],
   "author": "Whistle",
   "license": "ISC",
   "dependencies": {
@@ -46,7 +54,9 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^22.3.0",
+    "javascript-obfuscator": "^4.1.1",
     "prettier": "^3.2.4",
+    "terser": "^5.37.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   }
