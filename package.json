@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "ts-node src/index.ts",
     "start": "ts-node dist-encrypt/index.js",
     "build": "npx tsc",
     "encrypt": "npx javascript-obfuscator dist --output dist-encrypt --compact true --control-flow-flattening true --self-defending true"
