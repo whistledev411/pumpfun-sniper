@@ -4,6 +4,8 @@ You can snipe and trade tokens on pumpfun.
 
 You can filter tokens by creator or token ticker/symbol.
 
+ (Yellowstone gRPC + jito + nextblock + bloxroute + temperal)
+
 ## Update Version2(Yellowstone GRPC mode)
 
 I completed version2 that can snipe in 1 or 2 blocks after mint.
@@ -43,6 +45,7 @@ Telegram: [@whistle](https://t.me/devbeast5775) <br>
     npm start
     ```
 
+Pumpfun sniper
 
 ## Geyser(GRPC) Mode.
 If you have GRPC, you can monitor new Pump Token more quickly.
